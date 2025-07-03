@@ -1,17 +1,51 @@
 function inicializarMapa() {
-  // Coordenadas de San Miguel de Tucumán como centro
   const centro = { lat: -26.8241, lng: -65.2226 };
 
-  // Crear el mapa
   const mapa = new google.maps.Map(document.getElementById("mapa"), {
     center: centro,
     zoom: 13,
   });
 
-  // Agregar un marcador de prueba
-  const marcador = new google.maps.Marker({
-    position: centro,
-    map: mapa,
-    title: "Marcador de prueba",
-  });
+  fetch("datos.json")
+    .then(response => response.json())
+    .then(pozos => {
+      pozos.forEach(pozo => {
+        // Asignar color según el estado
+        let color = "green"; // Por defecto
+        switch (pozo.estado) {
+          case "Activo":
+            color = "green";
+            break;
+          case "En mantenimiento":
+            color = "orange";
+            break;
+          case "Inactivo":
+            color = "red";
+            break;
+          case "Emergencia":
+            color = "purple";
+            break;
+          default:
+            color = "blue"; // Para estados desconocidos
+        }
+
+        const marcador = new google.maps.Marker({
+          position: { lat: pozo.lat, lng: pozo.lng },
+          map: mapa,
+          title: pozo.nombre,
+          icon: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
+        });
+
+        const info = new google.maps.InfoWindow({
+          content: `<strong>${pozo.nombre}</strong><br>Estado: ${pozo.estado}`
+        });
+
+        marcador.addListener("click", () => {
+          info.open(mapa, marcador);
+        });
+      });
+    })
+    .catch(error => {
+      console.error("Error al cargar los datos de pines:", error);
+    });
 }
