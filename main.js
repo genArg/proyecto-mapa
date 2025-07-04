@@ -1,51 +1,74 @@
+let mapa;
+let marcadores = {};
+
 function inicializarMapa() {
   const centro = { lat: -26.8241, lng: -65.2226 };
 
-  const mapa = new google.maps.Map(document.getElementById("mapa"), {
+  mapa = new google.maps.Map(document.getElementById("mapa"), {
     center: centro,
     zoom: 13,
   });
 
+  // Primera carga
+  actualizarPozos();
+
+  // Actualizar cada 10 segundos (10000 ms)
+  setInterval(actualizarPozos, 10000);
+}
+
+function actualizarPozos() {
+  //fetch("/api/pozos")
   fetch("datos.json")
     .then(response => response.json())
     .then(pozos => {
       pozos.forEach(pozo => {
-        // Asignar color según el estado
-        let color = "green"; // Por defecto
+        const id = pozo.nombre;
+
+        // Determinar color del marcador
+        let color = "green";
         switch (pozo.estado) {
-          case "Activo":
-            color = "green";
-            break;
           case "En mantenimiento":
-            color = "orange";
+            color = "yellow";
             break;
           case "Inactivo":
             color = "red";
             break;
           case "Emergencia":
-            color = "purple";
+            color = "orange";
             break;
           default:
-            color = "blue"; // Para estados desconocidos
+            color = "green";
         }
 
-        const marcador = new google.maps.Marker({
-          position: { lat: pozo.lat, lng: pozo.lng },
-          map: mapa,
-          title: pozo.nombre,
-          icon: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
-        });
+        const icono = `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
 
-        const info = new google.maps.InfoWindow({
-          content: `<strong>${pozo.nombre}</strong><br>Estado: ${pozo.estado}`
-        });
+        if (marcadores[id]) {
+          // Si el marcador ya existe, actualizar ícono si cambió
+          if (marcadores[id].icon !== icono) {
+            marcadores[id].setIcon(icono);
+          }
+        } else {
+          // Crear nuevo marcador
+          const marcador = new google.maps.Marker({
+            position: { lat: pozo.lat, lng: pozo.lng },
+            map: mapa,
+            title: pozo.nombre,
+            icon: icono,
+          });
 
-        marcador.addListener("click", () => {
-          info.open(mapa, marcador);
-        });
+          const info = new google.maps.InfoWindow({
+            content: `<strong>${pozo.nombre}</strong><br>Estado: ${pozo.estado}`
+          });
+
+          marcador.addListener("click", () => {
+            info.open(mapa, marcador);
+          });
+
+          marcadores[id] = marcador;
+        }
       });
     })
     .catch(error => {
-      console.error("Error al cargar los datos de pines:", error);
+      console.error("Error al actualizar los pozos:", error);
     });
 }
